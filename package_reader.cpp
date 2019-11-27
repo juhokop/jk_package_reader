@@ -43,9 +43,9 @@ int main()
 
 // METHODS
 
-bool BCreatePackageList(std::vector<packageInfo>& packageList)
+bool BCreatePackageList(std::vector<packageInfo> &packageList)
 {
-	bool isCreated = false;
+	bool isPackageListCreated = false;
 
 	std::ifstream ifs("/var/lib/dpkg/status");
 	if (!ifs.is_open())
@@ -58,7 +58,6 @@ bool BCreatePackageList(std::vector<packageInfo>& packageList)
 		std::string keywordPackage = "Package:";
 		std::string keywordDepends = "Depends:";
 		std::string keywordDescription = "Description:";
-
 
 		packageInfo newPackage;
 		bool isFirst = true;
@@ -112,17 +111,17 @@ bool BCreatePackageList(std::vector<packageInfo>& packageList)
 				newPackage.description = line.substr(keywordDescription.size() + 1, line.size() - (keywordDescription.size() + 1));
 			}
 		}
-		isCreated = true;
+		isPackageListCreated = true;
 	}
 	ifs.close();
-	return isCreated;
+	return isPackageListCreated;
 }
 
-void OrganizePackageList(std::vector<packageInfo>& packageList)
+void OrganizePackageList(std::vector<packageInfo> &packageList)
 {
 	// Organize package list and dependencies:
 		// delete multiple identical dependencies,
-		// assign reverse dependencies.
+		// assign reverse dependencies. Delete dependencies that aren't found as packages.
 
 	for (std::size_t i = 0; i < packageList.size(); i++)
 	{
@@ -141,12 +140,22 @@ void OrganizePackageList(std::vector<packageInfo>& packageList)
 			}
 
 			// Assign reverse dependencies.
+			bool foundRDependency = false;
 			for (int l = 0; l < packageList.size(); l++)
 			{
 				if (packageList[l].name == packageList[i].dependencies[j])
 				{
 					packageList[l].reverseDependencies.push_back(packageList[i].name);
+					foundRDependency = true;
 				}
+			}
+			// Couldn't assign reverse dependency.
+			if (!foundRDependency)
+			{
+				std::vector<std::string>::iterator iter;
+				iter = packageList[i].dependencies.begin() + j;
+				packageList[i].dependencies.erase(iter);
+				j--;
 			}
 		}
 	}
@@ -155,7 +164,7 @@ void OrganizePackageList(std::vector<packageInfo>& packageList)
 
 
 // Quicksort:
-void QuicksortByName(std::vector<packageInfo>& arr, int low, int high)
+void QuicksortByName(std::vector<packageInfo> &arr, int low, int high)
 {
 	if (low < high)
 	{
@@ -165,7 +174,7 @@ void QuicksortByName(std::vector<packageInfo>& arr, int low, int high)
 	}
 }
 
-int QSPartition(std::vector<packageInfo>& arr, int low, int high)
+int QSPartition(std::vector<packageInfo> &arr, int low, int high)
 {
 	std::string pivot = arr[high].name;
 	int i = (low);
@@ -183,7 +192,7 @@ int QSPartition(std::vector<packageInfo>& arr, int low, int high)
 }
 
 // HTML creation:
-void CreateHTMLIndex(std::vector<packageInfo>& packageList)
+void CreateHTMLIndex(std::vector<packageInfo> &packageList)
 {
 	std::ofstream ofs("index.html");
 	if (!ofs.is_open())
@@ -208,7 +217,7 @@ void CreateHTMLIndex(std::vector<packageInfo>& packageList)
 	ofs.close();
 }
 
-void CreateHTMLPackages(std::vector<packageInfo>& packageList)
+void CreateHTMLPackages(std::vector<packageInfo> &packageList)
 {
 	for (int i = 0; i < packageList.size(); i++)
 	{
